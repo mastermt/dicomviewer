@@ -16,10 +16,10 @@ from PyQt5.QtWidgets import (
     QGraphicsPixmapItem,
     QToolButton,
     QStyle,
+    QShortcut,
 )
 from PyQt5.QtGui import QPixmap, QImage, QPainter, QKeySequence
 from PyQt5.QtCore import Qt
-from PyQt5.QtWidgets import QShortcut
 
 
 class ImageViewer(QGraphicsView):
@@ -33,6 +33,7 @@ class ImageViewer(QGraphicsView):
         self.min_zoom = 0.2
         self.max_zoom = 8.0
         self.pan_enabled = True
+        self.language = "pt"
 
         self.setRenderHints(self.renderHints() | QPainter.SmoothPixmapTransform)
         self.setTransformationAnchor(QGraphicsView.AnchorUnderMouse)
@@ -41,30 +42,30 @@ class ImageViewer(QGraphicsView):
         self.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
         self.setDragMode(QGraphicsView.ScrollHandDrag)
 
-        self.placeholder = QLabel("Nenhuma imagem carregada.", self)
+        self.placeholder = QLabel("", self)
         self.placeholder.setAlignment(Qt.AlignCenter)
         self.placeholder.setStyleSheet("color: #999; font-size: 14px;")
 
         self.btn_zoom_in = QToolButton(self)
         self.btn_zoom_in.setIcon(self.style().standardIcon(QStyle.SP_ArrowUp))
-        self.btn_zoom_in.setToolTip("Zoom in")
+        self.btn_zoom_in.setToolTip("")
         self.btn_zoom_in.clicked.connect(lambda: self.zoom_image(1.2))
 
         self.btn_zoom_out = QToolButton(self)
         self.btn_zoom_out.setIcon(self.style().standardIcon(QStyle.SP_ArrowDown))
-        self.btn_zoom_out.setToolTip("Zoom out")
+        self.btn_zoom_out.setToolTip("")
         self.btn_zoom_out.clicked.connect(lambda: self.zoom_image(1 / 1.2))
 
         self.btn_pan = QToolButton(self)
         self.btn_pan.setIcon(self.style().standardIcon(QStyle.SP_ArrowLeft))
-        self.btn_pan.setToolTip("Pan: ligado")
+        self.btn_pan.setToolTip("")
         self.btn_pan.setCheckable(True)
         self.btn_pan.setChecked(True)
         self.btn_pan.clicked.connect(self.toggle_pan)
 
         self.btn_reset = QToolButton(self)
         self.btn_reset.setIcon(self.style().standardIcon(QStyle.SP_BrowserReload))
-        self.btn_reset.setToolTip("Resetar zoom/posicao")
+        self.btn_reset.setToolTip("")
         self.btn_reset.clicked.connect(self.reset_view)
 
         button_style = """
@@ -101,6 +102,34 @@ class ImageViewer(QGraphicsView):
         self.shortcut_zoom_out.activated.connect(lambda: self.zoom_image(1 / 1.2))
         self.shortcut_reset = QShortcut(QKeySequence("R"), self)
         self.shortcut_reset.activated.connect(self.reset_view)
+        self.update_language(self.language)
+
+    def update_language(self, language):
+        self.language = language
+        texts = {
+            "pt": {
+                "placeholder": "Nenhuma imagem carregada.",
+                "zoom_in": "Aumentar zoom (Ctrl++)",
+                "zoom_out": "Diminuir zoom (Ctrl+-)",
+                "pan_on": "Pan: ligado",
+                "pan_off": "Pan: desligado",
+                "reset": "Resetar zoom/posição (R)",
+            },
+            "en": {
+                "placeholder": "No image loaded.",
+                "zoom_in": "Zoom in (Ctrl++)",
+                "zoom_out": "Zoom out (Ctrl+-)",
+                "pan_on": "Pan: on",
+                "pan_off": "Pan: off",
+                "reset": "Reset zoom/position (R)",
+            },
+        }
+        t = texts[language]
+        self.placeholder.setText(t["placeholder"])
+        self.btn_zoom_in.setToolTip(t["zoom_in"])
+        self.btn_zoom_out.setToolTip(t["zoom_out"])
+        self.btn_reset.setToolTip(t["reset"])
+        self.btn_pan.setToolTip(t["pan_on"] if self.pan_enabled else t["pan_off"])
 
     def set_pixmap(self, pixmap):
         self.pixmap_item.setPixmap(pixmap)
@@ -129,7 +158,7 @@ class ImageViewer(QGraphicsView):
             QGraphicsView.ScrollHandDrag if self.pan_enabled else QGraphicsView.NoDrag
         )
         self.btn_pan.setChecked(self.pan_enabled)
-        self.btn_pan.setToolTip("Pan: ligado" if self.pan_enabled else "Pan: desligado")
+        self.update_language(self.language)
 
     def reset_view(self):
         if self.pixmap_item.pixmap().isNull():
@@ -172,6 +201,7 @@ class ImageViewer(QGraphicsView):
 class DICOMViewer(QMainWindow):
     def __init__(self):
         super().__init__()
+        self.language = "pt"
         self.setWindowTitle("PyQt DICOM Viewer")
         self.setGeometry(100, 100, 800, 600)
 
@@ -187,7 +217,7 @@ class DICOMViewer(QMainWindow):
         info_frame.setFrameShape(QFrame.StyledPanel)
         info_layout = QVBoxLayout(info_frame)
         info_layout.setContentsMargins(8, 8, 8, 8)
-        self.info_label = QLabel("Abra um arquivo DICOM para visualizar os metadados.", info_frame)
+        self.info_label = QLabel("", info_frame)
         self.info_label.setAlignment(Qt.AlignLeft | Qt.AlignTop)
         self.info_label.setWordWrap(True)
         self.info_label.setTextInteractionFlags(Qt.TextSelectableByMouse)
@@ -199,45 +229,124 @@ class DICOMViewer(QMainWindow):
 
         self.setCentralWidget(central_widget)
 
-        # Menu for opening files
-        open_action = QAction("Open DICOM", self)
-        open_action.triggered.connect(self.open_dicom)
-        menu = self.menuBar().addMenu("File")
-        menu.addAction(open_action)
+        # Menus and actions
+        self.file_menu = self.menuBar().addMenu("")
+        self.open_action = QAction("", self)
+        self.open_action.triggered.connect(self.open_dicom)
+        self.file_menu.addAction(self.open_action)
+
+        self.language_menu = self.menuBar().addMenu("")
+        self.lang_pt_action = QAction("", self)
+        self.lang_pt_action.setCheckable(True)
+        self.lang_pt_action.triggered.connect(lambda: self.set_language("pt"))
+        self.language_menu.addAction(self.lang_pt_action)
+
+        self.lang_en_action = QAction("", self)
+        self.lang_en_action.setCheckable(True)
+        self.lang_en_action.triggered.connect(lambda: self.set_language("en"))
+        self.language_menu.addAction(self.lang_en_action)
+
+        self.last_metadata_ds = None
+        self.set_language("pt")
+
+    def tr(self):
+        return {
+            "pt": {
+                "window_title": "Visualizador DICOM (PyQt)",
+                "open_dicom": "Abrir DICOM",
+                "file_menu": "Arquivo",
+                "language_menu": "Idioma",
+                "lang_pt": "Português",
+                "lang_en": "Inglês",
+                "info_default": "Abra um arquivo DICOM para visualizar os metadados.",
+                "open_dialog_title": "Abrir arquivo DICOM",
+                "open_filter": "Arquivos DICOM (*.dcm);;Todos os arquivos (*)",
+                "error_loading": "Erro ao carregar DICOM: {error}",
+                "metadata_error": "Falha ao ler metadados do arquivo.",
+                "metadata_fields": [
+                    ("Paciente", "PatientName"),
+                    ("ID", "PatientID"),
+                    ("Modalidade", "Modality"),
+                    ("Estudo", "StudyDescription"),
+                    ("Série", "SeriesDescription"),
+                    ("Data", "StudyDate"),
+                    ("Linhas", "Rows"),
+                    ("Colunas", "Columns"),
+                    ("Bits", "BitsStored"),
+                    ("Fotométrico", "PhotometricInterpretation"),
+                ],
+                "unsupported_format": "Formato de imagem não suportado: shape={shape}",
+            },
+            "en": {
+                "window_title": "DICOM Viewer (PyQt)",
+                "open_dicom": "Open DICOM",
+                "file_menu": "File",
+                "language_menu": "Language",
+                "lang_pt": "Portuguese",
+                "lang_en": "English",
+                "info_default": "Open a DICOM file to view metadata.",
+                "open_dialog_title": "Open DICOM file",
+                "open_filter": "DICOM Files (*.dcm);;All Files (*)",
+                "error_loading": "Error loading DICOM: {error}",
+                "metadata_error": "Failed to read file metadata.",
+                "metadata_fields": [
+                    ("Patient", "PatientName"),
+                    ("ID", "PatientID"),
+                    ("Modality", "Modality"),
+                    ("Study", "StudyDescription"),
+                    ("Series", "SeriesDescription"),
+                    ("Date", "StudyDate"),
+                    ("Rows", "Rows"),
+                    ("Columns", "Columns"),
+                    ("Bits", "BitsStored"),
+                    ("Photometric", "PhotometricInterpretation"),
+                ],
+                "unsupported_format": "Unsupported image format: shape={shape}",
+            },
+        }[self.language]
+
+    def set_language(self, language):
+        self.language = language
+        t = self.tr()
+        self.setWindowTitle(t["window_title"])
+        self.file_menu.setTitle(t["file_menu"])
+        self.open_action.setText(t["open_dicom"])
+        self.language_menu.setTitle(t["language_menu"])
+        self.lang_pt_action.setText(t["lang_pt"])
+        self.lang_en_action.setText(t["lang_en"])
+        self.lang_pt_action.setChecked(language == "pt")
+        self.lang_en_action.setChecked(language == "en")
+        self.image_viewer.update_language(language)
+
+        if self.last_metadata_ds is not None:
+            self.info_label.setText(self.format_metadata(self.last_metadata_ds))
+        else:
+            self.info_label.setText(t["info_default"])
 
     def open_dicom(self):
         """Open a DICOM file and display it."""
+        t = self.tr()
         file_path, _ = QFileDialog.getOpenFileName(
-            self, "Open DICOM File", "", "DICOM Files (*.dcm);;All Files (*)"
+            self, t["open_dialog_title"], "", t["open_filter"]
         )
         if file_path:
             try:
                 ds = pydicom.dcmread(file_path)
+                self.last_metadata_ds = ds
                 self.info_label.setText(self.format_metadata(ds))
                 qimage = self.dataset_to_qimage(ds)
                 self.current_pixmap = QPixmap.fromImage(qimage)
                 self.update_image_display()
 
             except Exception as e:
-                self.image_viewer.placeholder.setText(f"Error loading DICOM: {e}")
+                self.image_viewer.placeholder.setText(self.tr()["error_loading"].format(error=e))
                 self.image_viewer.placeholder.show()
                 self.image_viewer.set_pixmap(QPixmap())
-                self.info_label.setText("Falha ao ler metadados do arquivo.")
+                self.info_label.setText(self.tr()["metadata_error"])
                 self.current_pixmap = None
 
     def format_metadata(self, ds):
-        fields = [
-            ("Paciente", "PatientName"),
-            ("ID", "PatientID"),
-            ("Modalidade", "Modality"),
-            ("Estudo", "StudyDescription"),
-            ("Série", "SeriesDescription"),
-            ("Data", "StudyDate"),
-            ("Tamanho", "Rows"),
-            ("Colunas", "Columns"),
-            ("Bits", "BitsStored"),
-            ("Photometric", "PhotometricInterpretation"),
-        ]
+        fields = self.tr()["metadata_fields"]
 
         lines = []
         for label, attr in fields:
@@ -288,7 +397,7 @@ class DICOMViewer(QMainWindow):
         if data.ndim == 4:
             data = data[0]
         if data.ndim != 3 or data.shape[2] != 3:
-            raise ValueError(f"Formato de imagem não suportado: shape={data.shape}")
+            raise ValueError(self.tr()["unsupported_format"].format(shape=data.shape))
 
         data = data.astype(np.float32)
         min_val = np.min(data)
