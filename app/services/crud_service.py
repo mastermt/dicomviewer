@@ -6,9 +6,22 @@ from app.db.models import Doctor, Patient
 
 class CRUDService:
     @staticmethod
-    def list_patients():
+    def list_patients(search_text="", page=1, page_size=10):
         with SessionLocal() as session:
-            return session.query(Patient).order_by(Patient.id.asc()).all()
+            query = session.query(Patient)
+            if search_text:
+                like = f"%{search_text}%"
+                query = query.filter(
+                    (Patient.full_name.ilike(like)) | (Patient.patient_code.ilike(like))
+                )
+            total = query.count()
+            items = (
+                query.order_by(Patient.id.asc())
+                .offset((page - 1) * page_size)
+                .limit(page_size)
+                .all()
+            )
+            return items, total
 
     @staticmethod
     def create_patient(data):
@@ -45,9 +58,20 @@ class CRUDService:
             session.commit()
 
     @staticmethod
-    def list_doctors():
+    def list_doctors(search_text="", page=1, page_size=10):
         with SessionLocal() as session:
-            return session.query(Doctor).order_by(Doctor.id.asc()).all()
+            query = session.query(Doctor)
+            if search_text:
+                like = f"%{search_text}%"
+                query = query.filter((Doctor.full_name.ilike(like)) | (Doctor.crm.ilike(like)))
+            total = query.count()
+            items = (
+                query.order_by(Doctor.id.asc())
+                .offset((page - 1) * page_size)
+                .limit(page_size)
+                .all()
+            )
+            return items, total
 
     @staticmethod
     def create_doctor(data):

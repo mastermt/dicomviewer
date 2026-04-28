@@ -1,4 +1,5 @@
-name: dicomviewer
+name: dicom
+# name: dicomviewer
 channels:
   - conda-forge
   - defaults
@@ -8,6 +9,7 @@ dependencies:
   - pydicom
   - pyqt
   - sqlalchemy
+  - alembic
   - pip
   - pip:
       - psycopg2-binary

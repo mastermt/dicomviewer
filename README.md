@@ -91,6 +91,29 @@ $env:DATABASE_URL="postgresql+psycopg2://user:password@localhost:5432/dicomviewe
 python dicomviewer.py
 ```
 
+### Alembic migrations
+
+Initialize or upgrade your schema with:
+
+```bash
+alembic upgrade head
+```
+
+Create a new migration after model changes:
+
+```bash
+alembic revision --autogenerate -m "describe your change"
+alembic upgrade head
+```
+
+If you already created tables previously (without Alembic), mark the current
+database state before running upgrades:
+
+```bash
+alembic stamp head
+alembic upgrade head
+```
+
 ## Troubleshooting
 
 - **PowerShell blocks virtual environment activation**
