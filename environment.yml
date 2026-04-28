@@ -1,0 +1,14 @@
+name: dicom-viewer
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.14
+  - numpy
+  - pydicom
+  - pyqt
+  - pip
+  - pip:
+      - pylibjpeg
+      - pylibjpeg-libjpeg
+      - pylibjpeg-openjpeg

@@ -1,0 +1,6 @@
+numpy
+pydicom
+PyQt5
+pylibjpeg
+pylibjpeg-libjpeg
+pylibjpeg-openjpeg
