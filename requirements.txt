@@ -1,6 +1,8 @@
 numpy
 pydicom
 PyQt5
+SQLAlchemy
+psycopg2-binary
 pylibjpeg
 pylibjpeg-libjpeg
 pylibjpeg-openjpeg

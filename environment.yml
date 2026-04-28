@@ -7,8 +7,10 @@ dependencies:
   - numpy
   - pydicom
   - pyqt
+  - sqlalchemy
   - pip
   - pip:
+      - psycopg2-binary
       - pylibjpeg
       - pylibjpeg-libjpeg
       - pylibjpeg-openjpeg

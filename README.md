@@ -70,6 +70,27 @@ python dicomviewer.py
 - `Ctrl+-`: zoom out
 - `R`: reset view
 
+## Data modules and database
+
+The project now includes initial CRUD modules for:
+
+- Patients registry
+- Doctors registry
+
+It uses SQLAlchemy and reads the connection string from `DATABASE_URL`.
+
+- Default (local test): SQLite
+  - `sqlite:///dicomviewer.db`
+- Production example: PostgreSQL
+  - `postgresql+psycopg2://user:password@host:5432/dbname`
+
+On Windows PowerShell, example before running the app:
+
+```bash
+$env:DATABASE_URL="postgresql+psycopg2://user:password@localhost:5432/dicomviewer"
+python dicomviewer.py
+```
+
 ## Troubleshooting
 
 - **PowerShell blocks virtual environment activation**
