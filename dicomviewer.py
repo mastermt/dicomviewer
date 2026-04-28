@@ -11,9 +11,129 @@ from PyQt5.QtWidgets import (
     QWidget,
     QVBoxLayout,
     QFrame,
+    QGraphicsView,
+    QGraphicsScene,
+    QGraphicsPixmapItem,
+    QToolButton,
 )
-from PyQt5.QtGui import QPixmap, QImage
+from PyQt5.QtGui import QPixmap, QImage, QPainter
 from PyQt5.QtCore import Qt
+
+
+class ImageViewer(QGraphicsView):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setScene(QGraphicsScene(self))
+        self.pixmap_item = QGraphicsPixmapItem()
+        self.scene().addItem(self.pixmap_item)
+
+        self.zoom_factor = 1.0
+        self.min_zoom = 0.2
+        self.max_zoom = 8.0
+        self.pan_enabled = True
+
+        self.setRenderHints(self.renderHints() | QPainter.SmoothPixmapTransform)
+        self.setTransformationAnchor(QGraphicsView.AnchorUnderMouse)
+        self.setResizeAnchor(QGraphicsView.AnchorViewCenter)
+        self.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        self.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        self.setDragMode(QGraphicsView.ScrollHandDrag)
+
+        self.placeholder = QLabel("Nenhuma imagem carregada.", self.viewport())
+        self.placeholder.setAlignment(Qt.AlignCenter)
+        self.placeholder.setStyleSheet("color: #999; font-size: 14px;")
+
+        self.btn_zoom_in = QToolButton(self.viewport())
+        self.btn_zoom_in.setText("+")
+        self.btn_zoom_in.clicked.connect(lambda: self.zoom_image(1.2))
+
+        self.btn_zoom_out = QToolButton(self.viewport())
+        self.btn_zoom_out.setText("-")
+        self.btn_zoom_out.clicked.connect(lambda: self.zoom_image(1 / 1.2))
+
+        self.btn_pan = QToolButton(self.viewport())
+        self.btn_pan.setText("Pan: On")
+        self.btn_pan.clicked.connect(self.toggle_pan)
+
+        self.btn_reset = QToolButton(self.viewport())
+        self.btn_reset.setText("Reset")
+        self.btn_reset.clicked.connect(self.reset_view)
+
+        button_style = """
+            QToolButton {
+                background-color: rgba(40, 40, 40, 180);
+                color: white;
+                border: 1px solid rgba(255, 255, 255, 120);
+                border-radius: 6px;
+                padding: 6px 10px;
+            }
+            QToolButton:hover {
+                background-color: rgba(60, 60, 60, 220);
+            }
+        """
+        self.btn_zoom_in.setStyleSheet(button_style)
+        self.btn_zoom_out.setStyleSheet(button_style)
+        self.btn_pan.setStyleSheet(button_style)
+        self.btn_reset.setStyleSheet(button_style)
+
+    def set_pixmap(self, pixmap):
+        self.pixmap_item.setPixmap(pixmap)
+        self.zoom_factor = 1.0
+        self.resetTransform()
+
+        has_image = not pixmap.isNull()
+        self.placeholder.setVisible(not has_image)
+        if has_image:
+            self.scene().setSceneRect(self.pixmap_item.boundingRect())
+            self.fitInView(self.pixmap_item, Qt.KeepAspectRatio)
+            self.zoom_factor = 1.0
+
+    def zoom_image(self, step):
+        new_zoom = self.zoom_factor * step
+        if new_zoom < self.min_zoom or new_zoom > self.max_zoom:
+            return
+        self.zoom_factor = new_zoom
+        self.scale(step, step)
+
+    def toggle_pan(self):
+        self.pan_enabled = not self.pan_enabled
+        self.setDragMode(
+            QGraphicsView.ScrollHandDrag if self.pan_enabled else QGraphicsView.NoDrag
+        )
+        self.btn_pan.setText(f"Pan: {'On' if self.pan_enabled else 'Off'}")
+
+    def reset_view(self):
+        if self.pixmap_item.pixmap().isNull():
+            return
+        self.resetTransform()
+        self.fitInView(self.pixmap_item, Qt.KeepAspectRatio)
+        self.zoom_factor = 1.0
+
+    def wheelEvent(self, event):
+        if self.pixmap_item.pixmap().isNull():
+            return
+        if event.angleDelta().y() > 0:
+            self.zoom_image(1.15)
+        else:
+            self.zoom_image(1 / 1.15)
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        margin = 12
+        gap = 8
+
+        self.placeholder.setGeometry(0, 0, self.viewport().width(), self.viewport().height())
+
+        buttons = [self.btn_zoom_in, self.btn_zoom_out, self.btn_pan, self.btn_reset]
+        for btn in buttons:
+            btn.adjustSize()
+
+        x = self.viewport().width() - margin
+        y = margin
+        for btn in buttons:
+            x -= btn.width()
+            btn.move(x, y)
+            x -= gap
 
 
 class DICOMViewer(QMainWindow):
@@ -41,10 +161,8 @@ class DICOMViewer(QMainWindow):
         info_layout.addWidget(self.info_label)
         layout.addWidget(info_frame, 0)
 
-        self.image_label = QLabel(central_widget)
-        self.image_label.setAlignment(Qt.AlignCenter)
-        self.image_label.setText("Nenhuma imagem carregada.")
-        layout.addWidget(self.image_label, 1)
+        self.image_viewer = ImageViewer(central_widget)
+        layout.addWidget(self.image_viewer, 1)
 
         self.setCentralWidget(central_widget)
 
@@ -68,7 +186,9 @@ class DICOMViewer(QMainWindow):
                 self.update_image_display()
 
             except Exception as e:
-                self.image_label.setText(f"Error loading DICOM: {e}")
+                self.image_viewer.placeholder.setText(f"Error loading DICOM: {e}")
+                self.image_viewer.placeholder.show()
+                self.image_viewer.set_pixmap(QPixmap())
                 self.info_label.setText("Falha ao ler metadados do arquivo.")
                 self.current_pixmap = None
 
@@ -158,17 +278,10 @@ class DICOMViewer(QMainWindow):
     def update_image_display(self):
         if not self.current_pixmap:
             return
-        self.image_label.setPixmap(
-            self.current_pixmap.scaled(
-                self.image_label.size(),
-                Qt.KeepAspectRatio,
-                Qt.SmoothTransformation,
-            )
-        )
+        self.image_viewer.set_pixmap(self.current_pixmap)
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
-        self.update_image_display()
 
 
 if __name__ == "__main__":
