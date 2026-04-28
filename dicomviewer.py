@@ -315,6 +315,8 @@ class DICOMViewer(QMainWindow):
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
+        if self.current_pixmap:
+            self.image_viewer.reset_view()
 
 
 if __name__ == "__main__":
