@@ -15,9 +15,11 @@ from PyQt5.QtWidgets import (
     QGraphicsScene,
     QGraphicsPixmapItem,
     QToolButton,
+    QStyle,
 )
-from PyQt5.QtGui import QPixmap, QImage, QPainter
+from PyQt5.QtGui import QPixmap, QImage, QPainter, QKeySequence
 from PyQt5.QtCore import Qt
+from PyQt5.QtWidgets import QShortcut
 
 
 class ImageViewer(QGraphicsView):
@@ -44,24 +46,24 @@ class ImageViewer(QGraphicsView):
         self.placeholder.setStyleSheet("color: #999; font-size: 14px;")
 
         self.btn_zoom_in = QToolButton(self)
-        self.btn_zoom_in.setText("+")
+        self.btn_zoom_in.setIcon(self.style().standardIcon(QStyle.SP_ArrowUp))
         self.btn_zoom_in.setToolTip("Zoom in")
         self.btn_zoom_in.clicked.connect(lambda: self.zoom_image(1.2))
 
         self.btn_zoom_out = QToolButton(self)
-        self.btn_zoom_out.setText("-")
+        self.btn_zoom_out.setIcon(self.style().standardIcon(QStyle.SP_ArrowDown))
         self.btn_zoom_out.setToolTip("Zoom out")
         self.btn_zoom_out.clicked.connect(lambda: self.zoom_image(1 / 1.2))
 
         self.btn_pan = QToolButton(self)
-        self.btn_pan.setText("P")
+        self.btn_pan.setIcon(self.style().standardIcon(QStyle.SP_ArrowLeft))
         self.btn_pan.setToolTip("Pan: ligado")
         self.btn_pan.setCheckable(True)
         self.btn_pan.setChecked(True)
         self.btn_pan.clicked.connect(self.toggle_pan)
 
         self.btn_reset = QToolButton(self)
-        self.btn_reset.setText("R")
+        self.btn_reset.setIcon(self.style().standardIcon(QStyle.SP_BrowserReload))
         self.btn_reset.setToolTip("Resetar zoom/posicao")
         self.btn_reset.clicked.connect(self.reset_view)
 
@@ -74,7 +76,6 @@ class ImageViewer(QGraphicsView):
                 min-width: 28px;
                 min-height: 28px;
                 padding: 2px;
-                font-weight: bold;
             }
             QToolButton:hover {
                 background-color: rgba(60, 60, 60, 220);
@@ -91,6 +92,15 @@ class ImageViewer(QGraphicsView):
         self._controls = [self.btn_zoom_in, self.btn_zoom_out, self.btn_pan, self.btn_reset]
         for btn in self._controls:
             btn.raise_()
+
+        self.shortcut_zoom_in_main = QShortcut(QKeySequence("Ctrl++"), self)
+        self.shortcut_zoom_in_main.activated.connect(lambda: self.zoom_image(1.2))
+        self.shortcut_zoom_in_alt = QShortcut(QKeySequence("Ctrl+="), self)
+        self.shortcut_zoom_in_alt.activated.connect(lambda: self.zoom_image(1.2))
+        self.shortcut_zoom_out = QShortcut(QKeySequence("Ctrl+-"), self)
+        self.shortcut_zoom_out.activated.connect(lambda: self.zoom_image(1 / 1.2))
+        self.shortcut_reset = QShortcut(QKeySequence("R"), self)
+        self.shortcut_reset.activated.connect(self.reset_view)
 
     def set_pixmap(self, pixmap):
         self.pixmap_item.setPixmap(pixmap)
@@ -152,10 +162,9 @@ class ImageViewer(QGraphicsView):
             btn.adjustSize()
             btn.raise_()
 
-        x = view_rect.right() - margin
         y = view_rect.top() + margin
         for btn in self._controls:
-            x -= btn.width()
+            x = view_rect.right() - margin - btn.width()
             btn.move(x, y)
             y += btn.height() + gap
 
