@@ -14,6 +14,7 @@ from PyQt5.QtWidgets import (
 
 from app.i18n.translator import Translator
 from app.modules.doctors.view import DoctorsView
+from app.modules.home.view import HomeView
 from app.modules.patients.view import PatientsView
 from app.services.dicom_service import DICOMService
 from app.ui.image_viewer import ImageViewer
@@ -45,6 +46,7 @@ class DICOMViewer(QMainWindow):
         layout.addWidget(self.info_frame, 0)
 
         self.stack = QStackedWidget(central_widget)
+        self.home_view = HomeView(self.translator, central_widget)
 
         viewer_page = QWidget(central_widget)
         viewer_layout = QVBoxLayout(viewer_page)
@@ -54,6 +56,7 @@ class DICOMViewer(QMainWindow):
 
         self.patients_view = PatientsView(self.translator, central_widget)
         self.doctors_view = DoctorsView(self.translator, central_widget)
+        self.stack.addWidget(self.home_view)
         self.stack.addWidget(viewer_page)
         self.stack.addWidget(self.patients_view)
         self.stack.addWidget(self.doctors_view)
@@ -64,8 +67,16 @@ class DICOMViewer(QMainWindow):
         self.open_action = QAction("", self)
         self.open_action.triggered.connect(self.open_dicom)
         self.file_menu.addAction(self.open_action)
+        self.file_menu.addSeparator()
+        self.exit_action = QAction("", self)
+        self.exit_action.triggered.connect(self.close)
+        self.file_menu.addAction(self.exit_action)
 
         self.modules_menu = self.menuBar().addMenu("")
+        self.module_home_action = QAction("", self)
+        self.module_home_action.triggered.connect(lambda: self.show_module("home"))
+        self.modules_menu.addAction(self.module_home_action)
+
         self.module_dicom_action = QAction("", self)
         self.module_dicom_action.triggered.connect(lambda: self.show_module("dicom"))
         self.modules_menu.addAction(self.module_dicom_action)
@@ -90,14 +101,16 @@ class DICOMViewer(QMainWindow):
         self.language_menu.addAction(self.lang_en_action)
 
         self.set_language("pt")
-        self.show_module("dicom")
+        self.show_module("home")
 
     def set_language(self, language):
         self.translator.set_language(language)
         self.setWindowTitle(self.translator.get("window_title"))
         self.file_menu.setTitle(self.translator.get("file_menu"))
         self.open_action.setText(self.translator.get("open_dicom"))
+        self.exit_action.setText(self.translator.get("exit_app"))
         self.modules_menu.setTitle(self.translator.get("modules_menu"))
+        self.module_home_action.setText(self.translator.get("module_home"))
         self.module_dicom_action.setText(self.translator.get("module_dicom"))
         self.module_patients_action.setText(self.translator.get("module_patients"))
         self.module_doctors_action.setText(self.translator.get("module_doctors"))
@@ -106,6 +119,7 @@ class DICOMViewer(QMainWindow):
         self.lang_en_action.setText(self.translator.get("lang_en"))
         self.lang_pt_action.setChecked(language == "pt")
         self.lang_en_action.setChecked(language == "en")
+        self.home_view.update_language()
         self.image_viewer.update_language()
         self.patients_view.update_language()
         self.doctors_view.update_language()
@@ -117,13 +131,13 @@ class DICOMViewer(QMainWindow):
         self._refresh_open_action_state()
 
     def show_module(self, module_name):
-        module_map = {"dicom": 0, "patients": 1, "doctors": 2}
+        module_map = {"home": 0, "dicom": 1, "patients": 2, "doctors": 3}
         self.stack.setCurrentIndex(module_map[module_name])
         self.info_frame.setVisible(module_name == "dicom")
         self._refresh_open_action_state()
 
     def _refresh_open_action_state(self):
-        self.open_action.setEnabled(self.stack.currentIndex() == 0)
+        self.open_action.setEnabled(self.stack.currentIndex() == 1)
 
     def open_dicom(self):
         file_path, _ = QFileDialog.getOpenFileName(
@@ -164,6 +178,6 @@ class DICOMViewer(QMainWindow):
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
-        if self.current_pixmap and self.stack.currentIndex() == 0:
+        if self.current_pixmap and self.stack.currentIndex() == 1:
             self.image_viewer.reset_view()
 
