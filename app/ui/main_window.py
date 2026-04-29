@@ -3,6 +3,8 @@ from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QPixmap
 from PyQt5.QtWidgets import (
     QAction,
+    QActionGroup,
+    QBoxLayout,
     QFileDialog,
     QFrame,
     QLabel,
@@ -28,13 +30,17 @@ class DICOMViewer(QMainWindow):
 
         self.current_pixmap = None
         self.last_metadata_ds = None
+        self.info_position = "left"
 
         central_widget = QWidget(self)
-        layout = QVBoxLayout(central_widget)
-        layout.setContentsMargins(8, 8, 8, 8)
-        layout.setSpacing(8)
+        self.main_layout = QVBoxLayout(central_widget)
+        self.main_layout.setContentsMargins(8, 8, 8, 8)
+        self.main_layout.setSpacing(8)
 
-        self.info_frame = QFrame(central_widget)
+        self.dicom_container = QWidget(central_widget)
+        self.main_layout.addWidget(self.dicom_container, 1)
+
+        self.info_frame = QFrame(self.dicom_container)
         self.info_frame.setFrameShape(QFrame.StyledPanel)
         info_layout = QVBoxLayout(self.info_frame)
         info_layout.setContentsMargins(8, 8, 8, 8)
@@ -43,24 +49,30 @@ class DICOMViewer(QMainWindow):
         self.info_label.setWordWrap(True)
         self.info_label.setTextInteractionFlags(Qt.TextSelectableByMouse)
         info_layout.addWidget(self.info_label)
-        layout.addWidget(self.info_frame, 0)
 
-        self.stack = QStackedWidget(central_widget)
-        self.home_view = HomeView(self.translator, central_widget)
+        self.stack = QStackedWidget(self.dicom_container)
+        self.home_view = HomeView(self.translator, self.dicom_container)
 
-        viewer_page = QWidget(central_widget)
+        viewer_page = QWidget(self.dicom_container)
         viewer_layout = QVBoxLayout(viewer_page)
         viewer_layout.setContentsMargins(0, 0, 0, 0)
         self.image_viewer = ImageViewer(self.translator, viewer_page)
         viewer_layout.addWidget(self.image_viewer)
 
-        self.patients_view = PatientsView(self.translator, central_widget)
-        self.doctors_view = DoctorsView(self.translator, central_widget)
+        self.patients_view = PatientsView(self.translator, self.dicom_container)
+        self.doctors_view = DoctorsView(self.translator, self.dicom_container)
         self.stack.addWidget(self.home_view)
         self.stack.addWidget(viewer_page)
         self.stack.addWidget(self.patients_view)
         self.stack.addWidget(self.doctors_view)
-        layout.addWidget(self.stack, 1)
+
+        self.dicom_layout = QBoxLayout(QBoxLayout.LeftToRight)
+        self.dicom_layout.setContentsMargins(0, 0, 0, 0)
+        self.dicom_layout.setSpacing(8)
+        self.dicom_layout.addWidget(self.info_frame, 0)
+        self.dicom_layout.addWidget(self.stack, 1)
+        self.dicom_container.setLayout(self.dicom_layout)
+        self._apply_info_position_layout()
         self.setCentralWidget(central_widget)
 
         self.file_menu = self.menuBar().addMenu("")
@@ -100,6 +112,26 @@ class DICOMViewer(QMainWindow):
         self.lang_en_action.triggered.connect(lambda: self.set_language("en"))
         self.language_menu.addAction(self.lang_en_action)
 
+        self.view_menu = self.menuBar().addMenu("")
+        self.info_position_group = QActionGroup(self)
+        self.info_position_group.setExclusive(True)
+
+        self.info_position_left_action = QAction("", self)
+        self.info_position_left_action.setCheckable(True)
+        self.info_position_left_action.triggered.connect(
+            lambda: self.set_info_position("left")
+        )
+        self.info_position_group.addAction(self.info_position_left_action)
+        self.view_menu.addAction(self.info_position_left_action)
+
+        self.info_position_top_action = QAction("", self)
+        self.info_position_top_action.setCheckable(True)
+        self.info_position_top_action.triggered.connect(
+            lambda: self.set_info_position("top")
+        )
+        self.info_position_group.addAction(self.info_position_top_action)
+        self.view_menu.addAction(self.info_position_top_action)
+
         self.set_language("pt")
         self.show_module("home")
 
@@ -117,8 +149,15 @@ class DICOMViewer(QMainWindow):
         self.language_menu.setTitle(self.translator.get("language_menu"))
         self.lang_pt_action.setText(self.translator.get("lang_pt"))
         self.lang_en_action.setText(self.translator.get("lang_en"))
+        self.view_menu.setTitle(self.translator.get("view_menu"))
+        self.info_position_left_action.setText(
+            self.translator.get("info_position_left")
+        )
+        self.info_position_top_action.setText(self.translator.get("info_position_top"))
         self.lang_pt_action.setChecked(language == "pt")
         self.lang_en_action.setChecked(language == "en")
+        self.info_position_left_action.setChecked(self.info_position == "left")
+        self.info_position_top_action.setChecked(self.info_position == "top")
         self.home_view.update_language()
         self.image_viewer.update_language()
         self.patients_view.update_language()
@@ -129,6 +168,22 @@ class DICOMViewer(QMainWindow):
         else:
             self.info_label.setText(self.translator.get("info_default"))
         self._refresh_open_action_state()
+
+    def _apply_info_position_layout(self):
+        if self.info_position == "top":
+            self.dicom_layout.setDirection(QBoxLayout.TopToBottom)
+            self.info_frame.setMaximumWidth(16777215)
+        else:
+            self.dicom_layout.setDirection(QBoxLayout.LeftToRight)
+            self.info_frame.setMaximumWidth(360)
+
+    def set_info_position(self, position):
+        if position not in ("left", "top") or position == self.info_position:
+            return
+        self.info_position = position
+        self._apply_info_position_layout()
+        self.info_position_left_action.setChecked(position == "left")
+        self.info_position_top_action.setChecked(position == "top")
 
     def show_module(self, module_name):
         module_map = {"home": 0, "dicom": 1, "patients": 2, "doctors": 3}
