@@ -169,7 +169,7 @@ class DICOMViewer(QMainWindow):
 
     def format_metadata(self, ds):
         fields = self.translator.get("metadata_fields")
-        return DICOMService.format_metadata(ds, fields)
+        return DICOMService.format_metadata(ds, fields, self.translator.language)
 
     def update_image_display(self):
         if not self.current_pixmap:

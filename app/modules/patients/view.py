@@ -1,5 +1,4 @@
 import re
-from datetime import datetime
 
 from PyQt5.QtWidgets import (
     QFormLayout,
@@ -15,6 +14,11 @@ from PyQt5.QtWidgets import (
     QWidget,
 )
 
+from app.i18n.date_utils import (
+    display_mask_for_language,
+    format_iso_date,
+    parse_user_date,
+)
 from app.services.crud_service import CRUDService
 
 
@@ -125,6 +129,9 @@ class PatientsView(QWidget):
         self.prev_page_button.setText(self.translator.get("crud_prev_page"))
         self.next_page_button.setText(self.translator.get("crud_next_page"))
         self.page_size_label.setText(self.translator.get("crud_page_size"))
+        self.birth_date_input.setPlaceholderText(
+            display_mask_for_language(self.translator.language)
+        )
         self.table.setHorizontalHeaderLabels(
             [
                 "ID",
@@ -134,6 +141,7 @@ class PatientsView(QWidget):
                 self.translator.get("patients_field_phone"),
             ]
         )
+        self.refresh_data()
 
     def refresh_data(self):
         patients, total = CRUDService.list_patients(
@@ -147,7 +155,13 @@ class PatientsView(QWidget):
             self.table.setItem(row, 0, QTableWidgetItem(str(patient.id)))
             self.table.setItem(row, 1, QTableWidgetItem(patient.full_name or ""))
             self.table.setItem(row, 2, QTableWidgetItem(patient.patient_code or ""))
-            self.table.setItem(row, 3, QTableWidgetItem(patient.birth_date or ""))
+            self.table.setItem(
+                row,
+                3,
+                QTableWidgetItem(
+                    format_iso_date(patient.birth_date or "", self.translator.language)
+                ),
+            )
             self.table.setItem(row, 4, QTableWidgetItem(patient.phone or ""))
         self.table.resizeColumnsToContents()
         total_pages = max(1, (self.total_rows + self.page_size - 1) // self.page_size)
@@ -160,10 +174,11 @@ class PatientsView(QWidget):
         self.next_page_button.setEnabled(self.current_page < total_pages)
 
     def _collect_data(self):
+        birth_date_text = self.birth_date_input.text().strip()
         return {
             "full_name": self.full_name_input.text().strip(),
             "patient_code": self.patient_code_input.text().strip(),
-            "birth_date": self.birth_date_input.text().strip() or None,
+            "birth_date": birth_date_text or None,
             "phone": self.phone_input.text().strip() or None,
         }
 
@@ -181,12 +196,14 @@ class PatientsView(QWidget):
         birth_date = data["birth_date"]
         if birth_date:
             try:
-                datetime.strptime(birth_date, "%Y-%m-%d")
+                data["birth_date"] = parse_user_date(birth_date, self.translator.language)
             except ValueError:
                 QMessageBox.warning(
                     self,
                     self.translator.get("crud_validation_title"),
-                    self.translator.get("crud_invalid_birth_date"),
+                    self.translator.get("crud_invalid_birth_date").format(
+                        format=display_mask_for_language(self.translator.language)
+                    ),
                 )
                 return False
 

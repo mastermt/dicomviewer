@@ -2,13 +2,17 @@ import numpy as np
 from pydicom.pixel_data_handlers.util import apply_voi_lut
 from PyQt5.QtGui import QImage
 
+from app.i18n.date_utils import format_dicom_date
+
 
 class DICOMService:
     @staticmethod
-    def format_metadata(ds, fields):
+    def format_metadata(ds, fields, language):
         lines = []
         for label, attr in fields:
             value = getattr(ds, attr, "N/A")
+            if attr.lower().endswith("date"):
+                value = format_dicom_date(str(value), language)
             lines.append(f"{label}: {value}")
         return "\n".join(lines)
 

@@ -45,7 +45,7 @@
   "crud_next_page": "Next",
   "crud_page_size": "Items per page:",
   "crud_page_status": "Page {page}/{total_pages} - {total} record(s)",
-  "crud_invalid_birth_date": "Invalid date. Use YYYY-MM-DD format.",
+  "crud_invalid_birth_date": "Invalid date. Use {format} format.",
   "crud_invalid_phone": "Invalid phone. Use numbers, spaces and + ( ) - symbols only.",
   "placeholder_no_image": "No image loaded.",
   "tooltip_zoom_in": "Zoom in (Ctrl++)",

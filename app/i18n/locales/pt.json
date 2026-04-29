@@ -45,7 +45,7 @@
   "crud_next_page": "Próxima",
   "crud_page_size": "Itens por página:",
   "crud_page_status": "Página {page}/{total_pages} - {total} registro(s)",
-  "crud_invalid_birth_date": "Data inválida. Use o formato YYYY-MM-DD.",
+  "crud_invalid_birth_date": "Data inválida. Use o formato {format}.",
   "crud_invalid_phone": "Telefone inválido. Use apenas números, espaço e símbolos + ( ) -.",
   "placeholder_no_image": "Nenhuma imagem carregada.",
   "tooltip_zoom_in": "Aumentar zoom (Ctrl++)",
