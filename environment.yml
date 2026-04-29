@@ -1,5 +1,4 @@
-name: dicom
-# name: dicomviewer
+name: dicomviewer
 channels:
   - conda-forge
   - defaults
