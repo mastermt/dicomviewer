@@ -33,16 +33,16 @@ class DICOMViewer(QMainWindow):
         layout.setContentsMargins(8, 8, 8, 8)
         layout.setSpacing(8)
 
-        info_frame = QFrame(central_widget)
-        info_frame.setFrameShape(QFrame.StyledPanel)
-        info_layout = QVBoxLayout(info_frame)
+        self.info_frame = QFrame(central_widget)
+        self.info_frame.setFrameShape(QFrame.StyledPanel)
+        info_layout = QVBoxLayout(self.info_frame)
         info_layout.setContentsMargins(8, 8, 8, 8)
-        self.info_label = QLabel("", info_frame)
+        self.info_label = QLabel("", self.info_frame)
         self.info_label.setAlignment(Qt.AlignLeft | Qt.AlignTop)
         self.info_label.setWordWrap(True)
         self.info_label.setTextInteractionFlags(Qt.TextSelectableByMouse)
         info_layout.addWidget(self.info_label)
-        layout.addWidget(info_frame, 0)
+        layout.addWidget(self.info_frame, 0)
 
         self.stack = QStackedWidget(central_widget)
 
@@ -119,6 +119,7 @@ class DICOMViewer(QMainWindow):
     def show_module(self, module_name):
         module_map = {"dicom": 0, "patients": 1, "doctors": 2}
         self.stack.setCurrentIndex(module_map[module_name])
+        self.info_frame.setVisible(module_name == "dicom")
         self._refresh_open_action_state()
 
     def _refresh_open_action_state(self):
